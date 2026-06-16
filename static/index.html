@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clipify – AI Video Clipper</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap');
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --card: #1c1c27; --border: #2a2a3a;
+      --accent: #7c5cfc; --accent2: #fc5c7d; --text: #f0f0f8; --muted: #7878a0;
+      --success: #4ade80; --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; padding: 0 0 80px; }
+    header { padding: 28px 20px 20px; text-align: center; }
+    .logo { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .tagline { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+    .upload-zone { background: var(--card); border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; margin-bottom: 16px; }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: #1a1a2e; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+    .upload-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .upload-sub { font-size: 13px; color: var(--muted); }
+    .upload-sub span { color: var(--accent); font-weight: 500; }
+    .file-selected { background: var(--card); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .file-icon { font-size: 32px; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; padding: 4px; }
+    .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: white; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .progress-card { background: var(--card); border-radius: var(--radius); padding: 24px; margin-top: 20px; display: none; }
+    .progress-card.visible { display: block; }
+    .progress-label { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .progress-bar-bg { background: var(--border); border-radius: 100px; height: 6px; overflow: hidden; margin-bottom: 10px; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 100px; width: 0%; transition: width 0.5s ease; }
+    .progress-steps { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .step { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .step.active { color: var(--text); }
+    .step.done { color: var(--success); }
+    .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .step.active .step-dot { background: var(--accent); }
+    .step.done .step-dot { background: var(--success); }
+    .results-section { margin-top: 24px; display: none; }
+    .results-section.visible { display: block; }
+    .results-header { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .results-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .clips-grid { display: flex; flex-direction: column; gap: 10px; }
+    .clip-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+    .clip-number { font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; color: var(--accent); width: 28px; }
+    .clip-meta { flex: 1; min-width: 0; }
+    .clip-title { font-size: 14px; font-weight: 500; }
+    .clip-duration { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .download-btn { background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 8px; color: white; font-size: 13px; font-weight: 600; padding: 8px 14px; cursor: pointer; text-decoration: none; font-family: 'Space Grotesk', sans-serif; }
+    .download-all-btn { width: 100%; padding: 14px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 12px; color: var(--accent); font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+    .error-card { background: #1f0f14; border: 1px solid #5c1a2a; border-radius: 12px; padding: 16px; margin-top: 16px; font-size: 14px; color: #fc5c7d; display: none; }
+    .error-card.visible { display: block; }
+    .reset-btn { width: 100%; padding: 12px; background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer; margin-top: 12px; }
+    .tips { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-top: 20px; }
+    .tips-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+    .tip { font-size: 13px; color: var(--muted); padding: 5px 0; display: flex; gap: 8px; }
+    .tip::before { content: "→"; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">✂ Clipify</div>
+    <div class="tagline">Turn long videos into viral short clips</div>
+  </header>
+  <div class="container">
+    <div id="uploadZone" class="upload-zone">
+      <input type="file" id="fileInput" accept="video/*" />
+      <span class="upload-icon">🎬</span>
+      <div class="upload-title">Tap to upload your video</div>
+      <div class="upload-sub">MP4, MOV, AVI · Up to <span>2GB</span></div>
+    </div>
+    <div id="fileSelected" class="file-selected" style="display:none">
+      <span class="file-icon">🎥</span>
+      <div class="file-info">
+        <div class="file-name" id="fileName">video.mp4</div>
+        <div class="file-size" id="fileSize">–</div>
+      </div>
+      <button class="remove-btn" onclick="resetAll()">✕</button>
+    </div>
+    <button class="btn-primary" id="submitBtn" onclick="uploadVideo()" disabled>Generate Clips →</button>
+    <div class="progress-card" id="progressCard">
+      <div class="progress-label"><div class="spinner"></div><span id="progressLabel">Processing your video...</span></div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <ul class="progress-steps">
+        <li class="step" id="step1"><div class="step-dot"></div>Uploading video</li>
+        <li class="step" id="step2"><div class="step-dot"></div>Transcribing with AI</li>
+        <li class="step" id="step3"><div class="step-dot"></div>Finding best moments</li>
+        <li class="step" id="step4"><div class="step-dot"></div>Cutting & reformatting clips</li>
+        <li class="step" id="step5"><div class="step-dot"></div>Burning captions</li>
+      </ul>
+    </div>
+    <div class="error-card" id="errorCard"></div>
+    <div class="results-section" id="resultsSection">
+      <div class="results-header">🎉 Your clips are ready!</div>
+      <div class="results-sub" id="clipsCount">0 clips generated</div>
+      <div class="clips-grid" id="clipsGrid"></div>
+      <button class="download-all-btn" onclick="downloadAll()">⬇ Download All Clips</button>
+      <button class="reset-btn" onclick="resetAll()">Process another video</button>
+    </div>
+    <div class="tips" id="tipsSection">
+      <div class="tips-title">Tips for best results</div>
+      <div class="tip">Use videos with clear speech for better captions</div>
+      <div class="tip">Longer videos (10–60 min) work best</div>
+      <div class="tip">Podcasts, interviews and tutorials work great</div>
+      <div class="tip">Clips are auto-formatted to 9:16 for Reels & Shorts</div>
+    </div>
+  </div>
+  <script>
+    let selectedFile=null,jobId=null,pollInterval=null,clips=[];
+    const fileInput=document.getElementById('fileInput');
+    fileInput.addEventListener('change',(e)=>{if(e.target.files[0])handleFileSelect(e.target.files[0]);});
+    function handleFileSelect(file){
+      selectedFile=file;
+      document.getElementById('fileName').textContent=file.name;
+      document.getElementById('fileSize').textContent=formatSize(file.size);
+      document.getElementById('uploadZone').style.display='none';
+      document.getElementById('fileSelected').style.display='flex';
+      document.getElementById('submitBtn').disabled=false;
+    }
+    function formatSize(b){if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB';}
+    async function uploadVideo(){
+      if(!selectedFile)return;
+      document.getElementById('submitBtn').disabled=true;
+      document.getElementById('fileSelected').style.display='none';
+      document.getElementById('tipsSection').style.display='none';
+      document.getElementById('progressCard').classList.add('visible');
+      setStep(1);
+      const formData=new FormData();
+      formData.append('file',selectedFile);
+      try{
+        const res=await fetch('/upload',{method:'POST',body:formData});
+        if(!res.ok){const err=await res.json();throw new Error(err.detail||'Upload failed');}
+        const data=await res.json();
+        jobId=data.job_id;
+        setStep(2);setProgress(20);startPolling();
+      }catch(err){showError(err.message);}
+    }
+    function startPolling(){
+      let elapsed=0;
+      pollInterval=setInterval(async()=>{
+        elapsed+=3;
+        try{
+          const res=await fetch(`/status/${jobId}`);
+          const data=await res.json();
+          if(elapsed<15){setStep(2);setProgress(25);}
+          else if(elapsed<30){setStep(3);setProgress(45);}
+          else if(elapsed<60){setStep(4);setProgress(65);}
+          else if(elapsed<90){setStep(5);setProgress(85);}
+          else{setProgress(95);}
+          if(data.status==='done'){clearInterval(pollInterval);setProgress(100);setAllDone();showResults(data.clips);}
+          else if(data.status==='error'){clearInterval(pollInterval);showError(data.error||'Something went wrong');}
+        }catch(e){}
+      },3000);
+    }
+    function setStep(n){for(let i=1;i<=5;i++){const el=document.getElementById(`step${i}`);el.className='step';if(i<n)el.classList.add('done');else if(i===n)el.classList.add('active');}}
+    function setAllDone(){for(let i=1;i<=5;i++)document.getElementById(`step${i}`).className='step done';document.getElementById('progressLabel').textContent='Done!';document.querySelector('.spinner').style.display='none';}
+    function setProgress(p){document.getElementById('progressFill').style.width=p+'%';}
+    function showResults(clipList){
+      clips=clipList;
+      document.getElementById('progressCard').classList.remove('visible');
+      document.getElementById('resultsSection').classList.add('visible');
+      document.getElementById('clipsCount').textContent=`${clipList.length} clips generated — ready to post`;
+      const grid=document.getElementById('clipsGrid');
+      grid.innerHTML='';
+      clipList.forEach((clip,i)=>{
+        const card=document.createElement('div');
+        card.className='clip-card';
+        const mins=Math.floor(clip.start/60),secs=Math.floor(clip.start%60);
+        card.innerHTML=`<div class="clip-number">#${i+1}</div><div class="clip-meta"><div class="clip-title">Clip ${i+1}</div><div class="clip-duration">⏱ ${clip.duration}s · starts at ${mins}:${secs.toString().padStart(2,'0')}</div></div><a class="download-btn" href="/download/${jobId}/${clip.filename}" download="${clip.filename}">Save</a>`;
+        grid.appendChild(card);
+      });
+    }
+    async function downloadAll(){for(const clip of clips){const a=document.createElement('a');a.href=`/download/${jobId}/${clip.filename}`;a.download=clip.filename;document.body.appendChild(a);a.click();document.body.removeChild(a);await new Promise(r=>setTimeout(r,600));}}
+    function showError(msg){document.getElementById('progressCard').classList.remove('visible');const card=document.getElementById('errorCard');card.textContent='⚠ '+msg;card.classList.add('visible');document.getElementById('submitBtn').disabled=false;document.getElementById('fileSelected').style.display='flex';}
+    function resetAll(){if(pollInterval)clearInterval(pollInterval);selectedFile=null;jobId=null;clips=[];fileInput.value='';document.getElementById('uploadZone').style.display='block';document.getElementById('fileSelected').style.display='none';document.getElementById('submitBtn').disabled=true;document.getElementById('progressCard').classList.remove('visible');document.getElementById('resultsSection').classList.remove('visible');document.getElementById('errorCard').classList.remove('visible');document.getElementById('tipsSection').style.display='block';setProgress(0);}
+  </script>
+</body>
+</html>
