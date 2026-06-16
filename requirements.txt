@@ -3,3 +3,4 @@ uvicorn==0.30.0
 python-multipart==0.0.9
 openai-whisper==20231117
 opencv-python-headless==4.10.0.82
+imageio-ffmpeg==0.4.9
